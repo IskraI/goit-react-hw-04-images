@@ -1,89 +1,98 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import css from '../components/App.module.css';
+
 import Searchbar from './Searchbar/Searchbar';
 import ImageGallery from './ImageGallery/ImageGallery';
 import Button from '../components/Button/Button';
 import Loader from '../components/Loader/Loader';
 
 import * as ImageService from '../service/image-service';
-class App extends Component {
-  state = {
-    query: '',
-    page: 1,
-    images: [],
-    totalResults: 0,
-    perPage: 12,
-    error: null,
-    showGallery: false,
-    isLoading: false,
-  };
-  componentDidUpdate(prevProps, prevState) {
-    const { query, page } = this.state;
-    if (prevState.query !== query || prevState.page !== page) {
-      this.getImage(query, page);
+
+const App = () => {
+  const [query, setQuery] = useState('');
+  const [images, setImages] = useState([]);
+  const [page, setPage] = useState(1);
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showGallery, setShowGallery] = useState(true);
+  const [prevQuery, setPrevQuery] = useState('');
+  const [prevPage, setPrevPage] = useState(1);
+  const [loadMore, setLoadMore] = useState(false);
+
+  const handleSubmit = searchQuery => {
+    if (query === searchQuery) {
+      toast.warning(
+        'The same request was detected. Please change you search query.',
+        {
+          position: toast.POSITION.TOP_RIGHT,
+        }
+      );
+      return;
     }
-  }
-
-  handleSubmit = data => {
-    this.setState({
-      query: data,
-      page: 1,
-      images: [],
-      totalResults: 0,
-      perPage: 12,
-      error: null,
-      showGallery: false,
-      isLoading: false,
-    });
-    // console.log(data);
+    setQuery(searchQuery);
+    setPage(1);
+    setImages([]);
+    setError(null);
+    setShowGallery(true);
+    setIsLoading(false);
+    setLoadMore(false);
   };
 
-  getImage = async (query, page) => {
-    this.setState({ isLoading: true });
-    try {
-      const data = await ImageService.getImages(query, page);
-      // console.log(data);
-      this.setState(prevState => ({
-        images: [...prevState.images, ...data.hits],
-        totalResults: data.totalHits,
-        perPage: 12,
-      }));
-      if (data.hits.length === 0) {
-        this.setState({
-          showGallery: true,
-        });
+  useEffect(() => {
+    if (query === '') return;
+
+    const fetchData = async () => {
+      setIsLoading(true);
+
+      try {
+        const { hits, totalHits } = await ImageService.getImages(query, page);
+        setImages(prevImages => [...prevImages, ...hits]);
+
+        if (totalHits === 0) {
+          setShowGallery(false);
+        }
+
+        if (totalHits <= page * ImageService.perPage) {
+          setLoadMore(true);
+        }
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
       }
-      // console.log(data.hits);
-    } catch (error) {
-      this.setState({ error: error.message });
-      console.log(error);
-    } finally {
-      this.setState({ isLoading: false });
+    };
+
+    if (query !== '' && (query !== prevQuery || page !== prevPage)) {
+      fetchData();
     }
-  };
-  handleLoadMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
+
+    setPrevQuery(query);
+    setPrevPage(page);
+  }, [query, page, prevPage, prevQuery]);
+
+  const handleLoadMore = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  render() {
-    const { images, totalResults, showGallery, error, isLoading } = this.state;
-    return (
-      <div className={css.app}>
-        <Searchbar onSubmit={this.handleSubmit} />
-        {showGallery && (
-          <p className={css.error}>Sorry. There are no images ... 😭</p>
-        )}
-        {error && <p className={css.error}>Sorry. There are {error} 😭</p>}
+  return (
+    <div className={css.app}>
+      <Searchbar onSubmit={handleSubmit} />
+      {!showGallery && (
+        <p className={css.error}>Sorry. There are no images ... 😭</p>
+      )}
+      {error && <p className={css.error}>Sorry. There are {error} 😭</p>}
 
-        {isLoading && <Loader />}
-        {images.length > 0 && <ImageGallery dataGallery={this.state.images} />}
-        {images.length > 0 && images.length < totalResults && (
-          <Button onClick={this.handleLoadMore} looktext={isLoading}></Button>
-        )}
-      </div>
-    );
-  }
-}
+      {isLoading && <Loader />}
+
+      {images.length > 0 && <ImageGallery dataGallery={images} />}
+      {images.length > 0 && !loadMore && (
+        <Button onClick={handleLoadMore} looktext={isLoading}></Button>
+      )}
+      <ToastContainer autoClose={3000} />
+    </div>
+  );
+};
+
 export default App;

@@ -1,8 +1,13 @@
 import PropTypes from 'prop-types';
 import css from './ImageGallery.module.css';
 import ImageGalleryItem from '../ImageGalleryItem/ImageGalleryItem';
+// import { useInView } from 'react-intersection-observer';
 
 const ImageGallery = ({ dataGallery }) => {
+  // const { ref } = useInView({
+  //   /* Optional options */
+  //   threshold: 0.5,
+  // });
   return (
     <ul className={css.image__gallery}>
       {dataGallery.map(el => (
