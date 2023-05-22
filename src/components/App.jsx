@@ -17,8 +17,6 @@ const App = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showGallery, setShowGallery] = useState(true);
-  const [prevQuery, setPrevQuery] = useState('');
-  const [prevPage, setPrevPage] = useState(1);
   const [loadMore, setLoadMore] = useState(false);
 
   const handleSubmit = searchQuery => {
@@ -63,14 +61,8 @@ const App = () => {
         setIsLoading(false);
       }
     };
-
-    if (query !== '' && (query !== prevQuery || page !== prevPage)) {
-      fetchData();
-    }
-
-    setPrevQuery(query);
-    setPrevPage(page);
-  }, [query, page, prevPage, prevQuery]);
+    fetchData();
+  }, [query, page]);
 
   const handleLoadMore = () => {
     setPage(prevPage => prevPage + 1);
